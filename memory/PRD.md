@@ -30,6 +30,9 @@ Build a portfolio-grade, production-style "AI Internal Policy Copilot" as a ligh
 - [x] Clear conversation functionality
 - [x] Index status indicators
 - [x] Sample policy PDF included
+- [x] **User Authentication** (register/login with email/password)
+- [x] **Audit Trail Logging** (tracks all queries, doc uploads, logins)
+- [x] **Compliance Dashboard** (view all user activities for audit)
 
 ## Tech Stack
 - **UI**: Streamlit
@@ -37,11 +40,13 @@ Build a portfolio-grade, production-style "AI Internal Policy Copilot" as a ligh
 - **Embeddings**: sentence-transformers
 - **Vector Store**: FAISS
 - **LLM**: OpenAI GPT-4.1-mini (via Emergent)
+- **Auth**: JSON-based user storage with SHA-256 password hashing
 
 ## Prioritized Backlog
 
 ### P0 (Critical)
 - All core features implemented ✓
+- Authentication & audit trail ✓
 
 ### P1 (Important)
 - OCR support for scanned PDFs
@@ -51,11 +56,12 @@ Build a portfolio-grade, production-style "AI Internal Policy Copilot" as a ligh
 ### P2 (Nice to Have)
 - Conversation memory for follow-up questions
 - Export Q&A sessions as reports
-- User authentication
-- Analytics dashboard
+- Admin role with elevated permissions
+- Analytics charts/visualizations
 
 ## Next Tasks
 1. Add OCR support using pytesseract
 2. Implement conversation memory
 3. Add document deletion from index
-4. Create admin dashboard for usage analytics
+4. Create analytics charts for usage visualization
+5. Add admin role with user management capabilities
