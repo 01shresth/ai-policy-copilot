@@ -74,5 +74,65 @@
       "answer_mode": "llm",
       "sources_count": 3
     }
+  },
+  {
+    "id": "f7f2fbde-dd3",
+    "timestamp": "2026-02-22T17:04:45.868262+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "USER_LOGIN",
+    "details": {}
+  },
+  {
+    "id": "d6cabd00-199",
+    "timestamp": "2026-02-22T17:04:54.770470+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "DOCUMENT_INDEXED",
+    "details": {
+      "document_name": "company_policies.pdf",
+      "chunks_count": 4
+    }
+  },
+  {
+    "id": "c05c7868-426",
+    "timestamp": "2026-02-22T17:05:04.682977+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "POLICY_QUERY",
+    "details": {
+      "query": "What is our vacation policy?",
+      "answer_mode": "llm",
+      "sources_count": 3
+    }
+  },
+  {
+    "id": "5e178435-c9f",
+    "timestamp": "2026-02-22T17:05:07.283309+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "POLICY_QUERY",
+    "details": {
+      "query": "What is our vacation policy?",
+      "answer_mode": "llm",
+      "sources_count": 3
+    }
+  },
+  {
+    "id": "601f2056-c0b",
+    "timestamp": "2026-02-22T17:05:10.032921+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "POLICY_QUERY",
+    "details": {
+      "query": "What is our vacation policy?",
+      "answer_mode": "llm",
+      "sources_count": 3
+    }
   }
 ]
