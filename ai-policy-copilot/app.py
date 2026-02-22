@@ -553,19 +553,18 @@ def render_login_form():
     """Render login form"""
     st.markdown("### Sign In")
     
-    with st.form("login_form"):
-        email = st.text_input("Email", placeholder="your@email.com")
-        password = st.text_input("Password", type="password", placeholder="••••••••")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            submitted = st.form_submit_button("Sign In", use_container_width=True)
-        with col2:
-            if st.form_submit_button("Create Account", use_container_width=True):
-                st.session_state.show_register = True
-                st.rerun()
-        
-        if submitted:
+    # Use session state for form inputs to persist across reruns
+    if "login_email" not in st.session_state:
+        st.session_state.login_email = ""
+    if "login_password" not in st.session_state:
+        st.session_state.login_password = ""
+    
+    email = st.text_input("Email", placeholder="your@email.com", key="login_email_input")
+    password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password_input")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Sign In", use_container_width=True, key="login_submit_btn"):
             if email and password:
                 result = authenticate_user(email, password)
                 if result["success"]:
@@ -577,6 +576,10 @@ def render_login_form():
                     st.error(result["message"])
             else:
                 st.warning("Please enter email and password")
+    with col2:
+        if st.button("Create Account", use_container_width=True, key="goto_register_btn"):
+            st.session_state.show_register = True
+            st.rerun()
     
     # Demo account hint
     st.markdown("""
