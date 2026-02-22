@@ -27,5 +27,52 @@
     "user_name": "Test User",
     "action": "USER_LOGIN",
     "details": {}
+  },
+  {
+    "id": "1df1a5de-e03",
+    "timestamp": "2026-02-22T16:59:53.297313+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "USER_LOGIN",
+    "details": {}
+  },
+  {
+    "id": "ed10d2b8-124",
+    "timestamp": "2026-02-22T17:00:01.352708+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "DOCUMENT_INDEXED",
+    "details": {
+      "document_name": "company_policies.pdf",
+      "chunks_count": 4
+    }
+  },
+  {
+    "id": "d4758dc7-af8",
+    "timestamp": "2026-02-22T17:00:12.106701+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "POLICY_QUERY",
+    "details": {
+      "query": "What is the vacation policy?",
+      "answer_mode": "llm",
+      "sources_count": 3
+    }
+  },
+  {
+    "id": "506ee17b-bd6",
+    "timestamp": "2026-02-22T17:00:14.791895+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "POLICY_QUERY",
+    "details": {
+      "query": "What is the vacation policy?",
+      "answer_mode": "llm",
+      "sources_count": 3
+    }
   }
 ]
