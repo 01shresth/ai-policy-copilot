@@ -1,0 +1,170 @@
+{
+  "design_strategy": {
+    "identity": "E1 - The Anti-AI Designer",
+    "theme": "The Performance Pro (Luxury Enterprise Edition)",
+    "core_philosophy": "Fusion over Imitation. Mix 'High-End Fintech' with 'Legal Precision'.",
+    "tech_stack": {
+      "framework": "Streamlit",
+      "ui_library": "streamlit-shadcn-ui",
+      "styling_engine": "Custom CSS Injection (via st.markdown)",
+      "backend_integration": "Direct Python calls to RAG pipeline"
+    }
+  },
+  "typography": {
+    "primary_font": "Inter",
+    "heading_font": "Playfair Display",
+    "mono_font": "JetBrains Mono",
+    "font_import_url": "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:wght@400;600;700&display=swap",
+    "rules": {
+      "headings": "Use 'Playfair Display' for H1/H2 to evoke authority and luxury. Weight: 600 or 700.",
+      "body": "Use 'Inter' for all functional text. Keep line-height loose (1.6) for readability.",
+      "citations": "Use 'JetBrains Mono' for source references and chunk IDs. Small text (0.85rem)."
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": "#D4AF37",
+      "primary_hover": "#B5952F",
+      "secondary": "#0F1116",
+      "background_main": "#F9FAFB",
+      "background_sidebar": "#0A0E17",
+      "surface_card": "#FFFFFF",
+      "text_primary": "#111827",
+      "text_secondary": "#6B7280",
+      "border_subtle": "#E5E7EB",
+      "border_accent": "#D4AF37",
+      "success": "#10B981",
+      "error": "#EF4444"
+    },
+    "gradients": {
+      "gold_sheen": "linear-gradient(135deg, #D4AF37 0%, #F3E5AB 50%, #B5952F 100%)",
+      "obsidian_mesh": "radial-gradient(circle at top right, #1F2937 0%, #0A0E17 100%)"
+    }
+  },
+  "layout_structure": {
+    "sidebar": {
+      "width": "300px",
+      "background": "#0A0E17",
+      "elements": [
+        "App Logo / Title (Gold Serif)",
+        "File Uploader (Custom styled)",
+        "Indexing Status Indicator",
+        "Clear Conversation Button (Bottom)"
+      ]
+    },
+    "main_area": {
+      "background": "#F9FAFB",
+      "max_width": "900px",
+      "elements": [
+        "Chat Container (Scrollable)",
+        "Input Area (Fixed at bottom)",
+        "Citation Panel (Right column or Collapsible)"
+      ]
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": {
+        "library": "streamlit-shadcn-ui",
+        "component": "button",
+        "props": {
+          "variant": "default",
+          "className": "bg-[#D4AF37] hover:bg-[#B5952F] text-black font-semibold rounded-md shadow-md transition-all"
+        }
+      },
+      "secondary": {
+        "library": "streamlit-shadcn-ui",
+        "component": "button",
+        "props": {
+          "variant": "outline",
+          "className": "border-[#E5E7EB] text-[#6B7280] hover:text-[#111827] hover:border-[#111827]"
+        }
+      }
+    },
+    "cards": {
+      "citation_card": {
+        "style": "glass",
+        "css_class": "citation-card",
+        "description": "White background with 0.5px border of Gold (#D4AF37). Low shadow."
+      }
+    },
+    "inputs": {
+      "chat_input": {
+        "type": "native_streamlit",
+        "css_override": "Remove default heavy borders. Add bottom-border only focus state for a 'minimalist' feel."
+      }
+    }
+  },
+  "assets": {
+    "images": [
+      {
+        "category": "background_texture",
+        "url": "https://images.unsplash.com/photo-1761437856144-99d74817b551?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHw0fHxhYnN0cmFjdCUyMGx1eHVyeSUyMGdlb21ldHJpYyUyMGJhY2tncm91bmQlMjBnb2xkJTIwYmxhY2slMjBtaW5pbWFsaXN0fGVufDB8fHx8MTc3MTc3Mjg4M3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Gold ribbed texture. Use as a subtle overlay or sidebar accent."
+      },
+      {
+        "category": "empty_state",
+        "url": "https://images.pexels.com/photos/7679599/pexels-photo-7679599.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Minimalist office workspace. Use for the 'Ready to start' screen."
+      }
+    ],
+    "icons": {
+      "library": "lucide-react (via streamlit-shadcn-ui)",
+      "mappings": {
+        "upload": "UploadCloud",
+        "document": "FileText",
+        "search": "Search",
+        "check": "CheckCircle2",
+        "alert": "AlertTriangle"
+      }
+    }
+  },
+  "custom_css_rules": [
+    "/* Hide Streamlit Branding */",
+    "#MainMenu {visibility: hidden;}",
+    "footer {visibility: hidden;}",
+    "header {visibility: hidden;}",
+    "",
+    "/* Luxury Sidebar */",
+    "[data-testid='stSidebar'] {",
+    "    background-color: #0A0E17;",
+    "    border-right: 1px solid #1F2937;",
+    "}",
+    "[data-testid='stSidebar'] * {",
+    "    color: #E5E7EB;",
+    "}",
+    "",
+    "/* Custom Chat Bubbles */",
+    ".user-message {",
+    "    background-color: #0A0E17;",
+    "    color: #FFFFFF;",
+    "    border-radius: 12px 12px 0 12px;",
+    "    padding: 1rem;",
+    "    margin-bottom: 1rem;",
+    "    max-width: 80%;",
+    "    align-self: flex-end;",
+    "    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);",
+    "}",
+    ".ai-message {",
+    "    background-color: #FFFFFF;",
+    "    color: #111827;",
+    "    border: 1px solid #E5E7EB;",
+    "    border-left: 3px solid #D4AF37;",
+    "    border-radius: 12px 12px 12px 0;",
+    "    padding: 1rem;",
+    "    margin-bottom: 1rem;",
+    "    max-width: 80%;",
+    "    align-self: flex-start;",
+    "    box-shadow: 0 2px 4px rgba(0,0,0,0.05);",
+    "}"
+  ],
+  "instructions_to_main_agent": [
+    "1. IGNORE the existing /frontend (React) folder. The user explicitly requested Streamlit.",
+    "2. Create a new file '/app/streamlit_app.py' as the main entry point.",
+    "3. Create '/app/requirements_streamlit.txt' containing: streamlit, streamlit-shadcn-ui, boto3, python-dotenv, styling libraries.",
+    "4. Use 'st.markdown' to inject the CSS rules defined in 'custom_css_rules'.",
+    "5. Implement the Chat Interface using 'st.session_state' for history.",
+    "6. Use 'streamlit-shadcn-ui' for the Sidebar components (Upload button, etc).",
+    "7. Ensure the RAG pipeline (backend) is imported or called directly from the python script (Monolithic prototype approach) OR call the FastAPI backend if preferred. Suggest Monolithic for Streamlit simplicity unless backend is complex."
+  ]
+}
