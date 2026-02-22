@@ -595,22 +595,15 @@ def render_register_form():
     """Render registration form"""
     st.markdown("### Create Account")
     
-    with st.form("register_form"):
-        name = st.text_input("Full Name", placeholder="John Doe")
-        email = st.text_input("Email", placeholder="your@email.com")
-        department = st.text_input("Department", placeholder="Engineering (optional)")
-        password = st.text_input("Password", type="password", placeholder="Min 6 characters")
-        confirm_password = st.text_input("Confirm Password", type="password")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            submitted = st.form_submit_button("Create Account", use_container_width=True)
-        with col2:
-            if st.form_submit_button("Back to Login", use_container_width=True):
-                st.session_state.show_register = False
-                st.rerun()
-        
-        if submitted:
+    name = st.text_input("Full Name", placeholder="John Doe", key="reg_name")
+    email = st.text_input("Email", placeholder="your@email.com", key="reg_email")
+    department = st.text_input("Department", placeholder="Engineering (optional)", key="reg_dept")
+    password = st.text_input("Password", type="password", placeholder="Min 6 characters", key="reg_password")
+    confirm_password = st.text_input("Confirm Password", type="password", key="reg_confirm")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Create Account", use_container_width=True, key="register_submit_btn"):
             if not name or not email or not password:
                 st.warning("Please fill in all required fields")
             elif password != confirm_password:
@@ -625,6 +618,10 @@ def render_register_form():
                     st.rerun()
                 else:
                     st.error(result["message"])
+    with col2:
+        if st.button("Back to Login", use_container_width=True, key="back_to_login_btn"):
+            st.session_state.show_register = False
+            st.rerun()
 
 
 def render_sidebar():
