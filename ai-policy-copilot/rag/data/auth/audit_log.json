@@ -18,5 +18,14 @@
     "user_name": "Test User",
     "action": "USER_LOGIN",
     "details": {}
+  },
+  {
+    "id": "18e06776-1d3",
+    "timestamp": "2026-02-22T16:58:55.805278+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "USER_LOGIN",
+    "details": {}
   }
 ]
