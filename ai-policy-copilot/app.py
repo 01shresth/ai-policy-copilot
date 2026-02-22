@@ -1,11 +1,12 @@
 """
 AI Internal Policy Copilot - Main Streamlit Application
-A premium RAG-based document Q&A system
+A premium RAG-based document Q&A system with user authentication and audit trails
 """
 import streamlit as st
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -18,6 +19,10 @@ from rag.vector_store import VectorStore
 from rag.retriever import Retriever
 from rag.generator import AnswerGenerator
 from rag.utils import truncate_text, clean_filename
+from rag.auth import (
+    register_user, authenticate_user, log_query, 
+    log_document_indexed, get_audit_log, get_user_stats, get_admin_stats
+)
 import config
 
 # Page configuration
@@ -288,6 +293,69 @@ st.markdown("""
         background: rgba(245, 158, 11, 0.1);
         color: #F59E0B;
     }
+    
+    /* Auth forms */
+    .auth-container {
+        max-width: 400px;
+        margin: 4rem auto;
+        padding: 2rem;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    }
+    
+    .auth-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.75rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        color: #111827;
+    }
+    
+    /* User info card */
+    .user-card {
+        background: rgba(212, 175, 55, 0.1);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .user-name {
+        font-weight: 600;
+        color: #D4AF37;
+        font-size: 0.95rem;
+    }
+    
+    .user-email {
+        color: #9CA3AF;
+        font-size: 0.8rem;
+    }
+    
+    /* Audit log styles */
+    .audit-entry {
+        background: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0;
+    }
+    
+    .audit-action {
+        font-weight: 600;
+        color: #111827;
+    }
+    
+    .audit-time {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        color: #6B7280;
+    }
+    
+    .audit-user {
+        color: #D4AF37;
+        font-size: 0.8rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -306,6 +374,15 @@ def initialize_session_state():
         st.session_state.is_indexing = False
     if "uploaded_files_data" not in st.session_state:
         st.session_state.uploaded_files_data = []
+    # Auth state
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+    if "user" not in st.session_state:
+        st.session_state.user = None
+    if "show_register" not in st.session_state:
+        st.session_state.show_register = False
+    if "show_audit" not in st.session_state:
+        st.session_state.show_audit = False
 
 
 def get_or_create_embedding_model():
@@ -323,7 +400,6 @@ def get_or_load_vector_store():
             index_path=config.FAISS_INDEX_PATH,
             metadata_path=config.METADATA_PATH
         )
-        # Try to load existing index
         if vector_store.load():
             st.session_state.vector_store = vector_store
         else:
@@ -339,7 +415,6 @@ def process_and_index_documents(uploaded_files):
     status_text = st.empty()
     
     try:
-        # Initialize components
         embedding_model = get_or_create_embedding_model()
         chunker = TextChunker(
             chunk_size=config.CHUNK_SIZE,
@@ -353,7 +428,6 @@ def process_and_index_documents(uploaded_files):
             status_text.markdown(f"📄 Processing: **{uploaded_file.name}**")
             progress_bar.progress((i) / len(uploaded_files) * 0.5)
             
-            # Extract text from PDF
             file_bytes = uploaded_file.read()
             doc_data = PDFLoader.extract_from_bytes(file_bytes, uploaded_file.name)
             
@@ -365,7 +439,6 @@ def process_and_index_documents(uploaded_files):
                 st.warning(f"⚠️ No text extracted from {uploaded_file.name}")
                 continue
             
-            # Chunk the document
             chunks = chunker.chunk_document(doc_data)
             all_chunks.extend(chunks)
             indexed_docs.append({
@@ -373,19 +446,27 @@ def process_and_index_documents(uploaded_files):
                 "pages": doc_data.get("total_pages", 0),
                 "chunks": len(chunks)
             })
+            
+            # Log document indexing
+            if st.session_state.user:
+                log_document_indexed(
+                    user_id=st.session_state.user["id"],
+                    user_email=st.session_state.user["email"],
+                    user_name=st.session_state.user["name"],
+                    doc_name=uploaded_file.name,
+                    chunks_count=len(chunks)
+                )
         
         if not all_chunks:
             st.error("❌ No text could be extracted from the uploaded documents.")
             return False
         
-        # Generate embeddings
         status_text.markdown("🧠 Generating embeddings...")
         progress_bar.progress(0.6)
         
         chunk_texts = [chunk["text"] for chunk in all_chunks]
         embeddings = embedding_model.embed_texts(chunk_texts)
         
-        # Create vector store
         status_text.markdown("📊 Building vector index...")
         progress_bar.progress(0.8)
         
@@ -424,7 +505,6 @@ def ask_question(query: str):
             "sources": []
         }
     
-    # Retrieve relevant chunks
     retriever = Retriever(
         embedding_model=embedding_model,
         vector_store=vector_store,
@@ -433,30 +513,141 @@ def ask_question(query: str):
     
     context_chunks = retriever.retrieve(query)
     
-    # Generate answer
     generator = AnswerGenerator(api_key=config.EMERGENT_LLM_KEY)
     result = generator.generate(query, context_chunks)
     
+    # Log query for audit trail
+    if st.session_state.user:
+        log_query(
+            user_id=st.session_state.user["id"],
+            user_email=st.session_state.user["email"],
+            user_name=st.session_state.user["name"],
+            query=query,
+            answer_mode=result["mode"],
+            sources_count=len(result["sources"])
+        )
+    
     return result
+
+
+def render_auth_page():
+    """Render the authentication page"""
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem 0;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">📋</div>
+        <h1 class="premium-title">Policy Copilot</h1>
+        <p class="subtitle">AI-Powered Document Assistant with Compliance Tracking</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        if st.session_state.show_register:
+            render_register_form()
+        else:
+            render_login_form()
+
+
+def render_login_form():
+    """Render login form"""
+    st.markdown("### Sign In")
+    
+    with st.form("login_form"):
+        email = st.text_input("Email", placeholder="your@email.com")
+        password = st.text_input("Password", type="password", placeholder="••••••••")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            submitted = st.form_submit_button("Sign In", use_container_width=True)
+        with col2:
+            if st.form_submit_button("Create Account", use_container_width=True):
+                st.session_state.show_register = True
+                st.rerun()
+        
+        if submitted:
+            if email and password:
+                result = authenticate_user(email, password)
+                if result["success"]:
+                    st.session_state.authenticated = True
+                    st.session_state.user = result["user"]
+                    st.success("Welcome back!")
+                    st.rerun()
+                else:
+                    st.error(result["message"])
+            else:
+                st.warning("Please enter email and password")
+    
+    # Demo account hint
+    st.markdown("""
+    <div style="text-align: center; margin-top: 2rem; padding: 1rem; background: #F9FAFB; border-radius: 8px;">
+        <p style="color: #6B7280; font-size: 0.85rem; margin: 0;">
+            New user? Create an account to track your policy queries.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_register_form():
+    """Render registration form"""
+    st.markdown("### Create Account")
+    
+    with st.form("register_form"):
+        name = st.text_input("Full Name", placeholder="John Doe")
+        email = st.text_input("Email", placeholder="your@email.com")
+        department = st.text_input("Department", placeholder="Engineering (optional)")
+        password = st.text_input("Password", type="password", placeholder="Min 6 characters")
+        confirm_password = st.text_input("Confirm Password", type="password")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            submitted = st.form_submit_button("Create Account", use_container_width=True)
+        with col2:
+            if st.form_submit_button("Back to Login", use_container_width=True):
+                st.session_state.show_register = False
+                st.rerun()
+        
+        if submitted:
+            if not name or not email or not password:
+                st.warning("Please fill in all required fields")
+            elif password != confirm_password:
+                st.error("Passwords do not match")
+            elif len(password) < 6:
+                st.error("Password must be at least 6 characters")
+            else:
+                result = register_user(email, password, name, department)
+                if result["success"]:
+                    st.success("Account created! Please sign in.")
+                    st.session_state.show_register = False
+                    st.rerun()
+                else:
+                    st.error(result["message"])
 
 
 def render_sidebar():
     """Render the sidebar with upload and controls"""
     with st.sidebar:
+        # User info
+        if st.session_state.user:
+            st.markdown(f"""
+            <div class="user-card">
+                <div class="user-name">👤 {st.session_state.user['name']}</div>
+                <div class="user-email">{st.session_state.user['email']}</div>
+                {f"<div style='font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;'>{st.session_state.user.get('department', '')}</div>" if st.session_state.user.get('department') else ""}
+            </div>
+            """, unsafe_allow_html=True)
+        
         # Logo/Title
         st.markdown("""
-        <div style="text-align: center; padding: 1.5rem 0;">
-            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📋</div>
-            <div style="font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: #D4AF37;">
+        <div style="text-align: center; padding: 1rem 0;">
+            <div style="font-size: 2rem; margin-bottom: 0.25rem;">📋</div>
+            <div style="font-family: 'Playfair Display', serif; font-size: 1.25rem; font-weight: 700; color: #D4AF37;">
                 Policy Copilot
-            </div>
-            <div style="font-size: 0.75rem; color: #6B7280; margin-top: 0.25rem;">
-                AI-Powered Document Assistant
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("<hr style='border-color: #1F2937; margin: 1rem 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color: #1F2937; margin: 0.5rem 0;'>", unsafe_allow_html=True)
         
         # File uploader
         st.markdown("""
@@ -473,10 +664,9 @@ def render_sidebar():
             key="pdf_uploader"
         )
         
-        # Show uploaded files
         if uploaded_files:
             st.markdown("""
-            <div style="color: #9CA3AF; font-size: 0.75rem; margin: 1rem 0 0.5rem 0;">
+            <div style="color: #9CA3AF; font-size: 0.75rem; margin: 0.5rem 0;">
                 UPLOADED FILES
             </div>
             """, unsafe_allow_html=True)
@@ -489,24 +679,21 @@ def render_sidebar():
                 </div>
                 """, unsafe_allow_html=True)
         
-        st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-        
-        # Index button
         if uploaded_files:
             if st.button("🔄 Index Documents", key="index_btn", use_container_width=True):
                 with st.spinner(""):
                     success = process_and_index_documents(uploaded_files)
                     if success:
-                        st.success("✅ Documents indexed successfully!")
+                        st.success("✅ Documents indexed!")
                         st.rerun()
         
-        st.markdown("<hr style='border-color: #1F2937; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color: #1F2937; margin: 1rem 0;'>", unsafe_allow_html=True)
         
         # Index status
         vector_store = get_or_load_vector_store()
         
         st.markdown("""
-        <div style="color: #E5E7EB; font-weight: 500; margin-bottom: 0.75rem; font-size: 0.9rem;">
+        <div style="color: #E5E7EB; font-weight: 500; margin-bottom: 0.5rem; font-size: 0.85rem;">
             📊 Index Status
         </div>
         """, unsafe_allow_html=True)
@@ -517,24 +704,6 @@ def render_sidebar():
                 <span>●</span> {vector_store.total_chunks} chunks indexed
             </div>
             """, unsafe_allow_html=True)
-            
-            # Show indexed documents
-            if st.session_state.indexed_docs:
-                st.markdown("""
-                <div style="color: #9CA3AF; font-size: 0.75rem; margin: 1rem 0 0.5rem 0;">
-                    INDEXED DOCUMENTS
-                </div>
-                """, unsafe_allow_html=True)
-                
-                for doc in st.session_state.indexed_docs:
-                    st.markdown(f"""
-                    <div class="doc-item">
-                        <span class="doc-icon">✓</span>
-                        <span class="doc-name">{doc['name']}<br>
-                        <span style="font-size: 0.7rem; color: #6B7280;">{doc['pages']} pages • {doc['chunks']} chunks</span>
-                        </span>
-                    </div>
-                    """, unsafe_allow_html=True)
         else:
             st.markdown("""
             <div class="status-badge status-warning">
@@ -543,8 +712,6 @@ def render_sidebar():
             """, unsafe_allow_html=True)
         
         # LLM status
-        st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
-        
         generator = AnswerGenerator()
         if generator.has_llm:
             st.markdown("""
@@ -559,28 +726,116 @@ def render_sidebar():
             </div>
             """, unsafe_allow_html=True)
         
-        # Clear conversation
-        st.markdown("<hr style='border-color: #1F2937; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color: #1F2937; margin: 1rem 0;'>", unsafe_allow_html=True)
         
+        # Audit log toggle
+        if st.button("📜 View Audit Trail", key="audit_btn", use_container_width=True):
+            st.session_state.show_audit = not st.session_state.show_audit
+            st.rerun()
+        
+        # Clear conversation
         if st.button("🗑️ Clear Conversation", key="clear_btn", use_container_width=True):
+            st.session_state.messages = []
+            st.rerun()
+        
+        # Logout
+        st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+        if st.button("🚪 Sign Out", key="logout_btn", use_container_width=True):
+            st.session_state.authenticated = False
+            st.session_state.user = None
             st.session_state.messages = []
             st.rerun()
 
 
+def render_audit_trail():
+    """Render audit trail view"""
+    st.markdown("""
+    <h1 class="premium-title">Audit Trail</h1>
+    <p class="subtitle">Track all policy queries and document activities for compliance.</p>
+    """, unsafe_allow_html=True)
+    
+    # User stats
+    if st.session_state.user:
+        stats = get_user_stats(st.session_state.user["id"])
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Your Queries", stats["total_queries"])
+        with col2:
+            st.metric("Docs Indexed", stats["documents_indexed"])
+        with col3:
+            if stats["last_activity"]:
+                last_time = datetime.fromisoformat(stats["last_activity"].replace('Z', '+00:00'))
+                st.metric("Last Activity", last_time.strftime("%b %d, %H:%M"))
+            else:
+                st.metric("Last Activity", "N/A")
+    
+    st.markdown("<div class='gold-divider'></div>", unsafe_allow_html=True)
+    
+    # Filter options
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        filter_action = st.selectbox(
+            "Filter by action",
+            ["All Actions", "POLICY_QUERY", "DOCUMENT_INDEXED", "USER_LOGIN", "USER_REGISTERED"],
+            label_visibility="collapsed"
+        )
+    with col2:
+        limit = st.selectbox("Show", [25, 50, 100], label_visibility="collapsed")
+    
+    # Get audit log
+    action_filter = None if filter_action == "All Actions" else filter_action
+    audit_entries = get_audit_log(limit=limit, action_type=action_filter)
+    
+    if not audit_entries:
+        st.info("No audit entries found.")
+        return
+    
+    # Display entries
+    for entry in audit_entries:
+        timestamp = datetime.fromisoformat(entry["timestamp"].replace('Z', '+00:00'))
+        
+        action_icons = {
+            "POLICY_QUERY": "🔍",
+            "DOCUMENT_INDEXED": "📄",
+            "USER_LOGIN": "🔐",
+            "USER_REGISTERED": "👤"
+        }
+        icon = action_icons.get(entry["action"], "📝")
+        
+        with st.container():
+            st.markdown(f"""
+            <div class="audit-entry">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span style="font-size: 1.1rem;">{icon}</span>
+                        <span class="audit-action">{entry["action"].replace("_", " ").title()}</span>
+                        <span class="audit-user">by {entry["user_name"]}</span>
+                    </div>
+                    <span class="audit-time">{timestamp.strftime("%Y-%m-%d %H:%M:%S")}</span>
+                </div>
+                {f'<div style="margin-top: 0.5rem; padding-left: 1.5rem; color: #6B7280; font-size: 0.85rem;">{entry["details"].get("query", entry["details"].get("document_name", ""))}</div>' if entry["details"] else ''}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Back button
+    st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)
+    if st.button("← Back to Chat", key="back_btn"):
+        st.session_state.show_audit = False
+        st.rerun()
+
+
 def render_main_content():
     """Render the main chat interface"""
-    # Title
     st.markdown("""
     <h1 class="premium-title">Ask Your Policy Questions</h1>
     <p class="subtitle">Upload your policy documents and get instant, accurate answers with source citations.</p>
     """, unsafe_allow_html=True)
     
-    # Chat container
     chat_container = st.container()
     
     with chat_container:
         if not st.session_state.messages:
-            # Empty state
             st.markdown("""
             <div class="empty-state">
                 <div class="empty-state-icon">📚</div>
@@ -597,14 +852,12 @@ def render_main_content():
             </div>
             """, unsafe_allow_html=True)
         else:
-            # Display chat messages
             for message in st.session_state.messages:
                 if message["role"] == "user":
                     st.markdown(f"""
                     <div class="user-message">{message["content"]}</div>
                     """, unsafe_allow_html=True)
                 else:
-                    # AI message with sources
                     answer = message.get("answer", message.get("content", ""))
                     mode = message.get("mode", "unknown")
                     sources = message.get("sources", [])
@@ -622,7 +875,6 @@ def render_main_content():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Show citations
                     if sources and mode == "llm":
                         with st.expander("📚 View Source Citations", expanded=False):
                             for i, source in enumerate(sources, 1):
@@ -644,7 +896,6 @@ def render_main_content():
     
     st.markdown("<div class='gold-divider'></div>", unsafe_allow_html=True)
     
-    # Input area
     col1, col2 = st.columns([6, 1])
     
     with col1:
@@ -658,21 +909,16 @@ def render_main_content():
     with col2:
         ask_clicked = st.button("Ask", key="ask_btn", use_container_width=True)
     
-    # Process question
     if (ask_clicked or user_question) and user_question:
-        # Check if this is a new question
         if not st.session_state.messages or st.session_state.messages[-1].get("content") != user_question:
-            # Add user message
             st.session_state.messages.append({
                 "role": "user",
                 "content": user_question
             })
             
-            # Get answer
             with st.spinner("Thinking..."):
                 result = ask_question(user_question)
             
-            # Add AI response
             st.session_state.messages.append({
                 "role": "assistant",
                 "answer": result["answer"],
@@ -686,8 +932,19 @@ def render_main_content():
 def main():
     """Main application entry point"""
     initialize_session_state()
+    
+    # Check authentication
+    if not st.session_state.authenticated:
+        render_auth_page()
+        return
+    
+    # Render authenticated app
     render_sidebar()
-    render_main_content()
+    
+    if st.session_state.show_audit:
+        render_audit_trail()
+    else:
+        render_main_content()
 
 
 if __name__ == "__main__":
