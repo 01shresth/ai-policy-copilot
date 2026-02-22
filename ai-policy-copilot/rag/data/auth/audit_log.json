@@ -1,0 +1,13 @@
+[
+  {
+    "id": "1139f7a2-ead",
+    "timestamp": "2026-02-22T16:58:09.752835+00:00",
+    "user_id": "31f65ffa",
+    "user_email": "test@example.com",
+    "user_name": "Test User",
+    "action": "USER_REGISTERED",
+    "details": {
+      "department": "Engineering"
+    }
+  }
+]
